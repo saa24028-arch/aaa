@@ -372,7 +372,7 @@
         let reservations = [];
         let pendingDeleteId = null;
 
-        // UI DOM Elements
+        // UI DOM Elements (Explicit Declarations)
         const loginSection = document.getElementById('loginSection');
         const appSection = document.getElementById('appSection');
         const userInfoHeader = document.getElementById('userInfoHeader');
@@ -385,9 +385,40 @@
         const loginErrorAlert = document.getElementById('loginErrorAlert');
         const loginErrorMessage = document.getElementById('loginErrorMessage');
 
+        // Form DOM Elements
+        const reservationForm = document.getElementById('reservationForm');
+        const editReservationId = document.getElementById('editReservationId');
+        const facilityNameInput = document.getElementById('facilityName');
+        const useDateInput = document.getElementById('useDate');
+        const timeSlotInput = document.getElementById('timeSlot');
+        const reserverNameInput = document.getElementById('reserverName');
+        const purposeInput = document.getElementById('purpose');
+        const formTitle = document.getElementById('formTitle');
+        const submitBtnText = document.getElementById('submitBtnText');
+        const cancelEditBtn = document.getElementById('cancelEditBtn');
+        const formErrorAlert = document.getElementById('formErrorAlert');
+        const formErrorMessage = document.getElementById('formErrorMessage');
+
+        // Filter & List DOM Elements
+        const filterFacility = document.getElementById('filterFacility');
+        const filterDate = document.getElementById('filterDate');
+        const resetFilterBtn = document.getElementById('resetFilterBtn');
+        const reservationList = document.getElementById('reservationList');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const emptyState = document.getElementById('emptyState');
+        const totalReservationCount = document.getElementById('totalReservationCount');
+        const filteredCountBadge = document.getElementById('filteredCountBadge');
+
+        // Modal DOM Elements
+        const deleteModal = document.getElementById('deleteModal');
+        const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
         // Set Default Date to Today
-        const todayStr = new Date().toISOString().split('T')[0];
-        document.getElementById('useDate').value = todayStr;
+        if (useDateInput) {
+            const todayStr = new Date().toISOString().split('T')[0];
+            useDateInput.value = todayStr;
+        }
 
         // Auth State Listener
         onAuthStateChanged(auth, (user) => {
@@ -396,96 +427,101 @@
                 const displayName = user.displayName || (user.isAnonymous ? 'テスト生徒（匿名）' : 'ユーザー');
                 
                 // Update UI for Logged In User
-                userAvatar.src = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=0D9488&color=fff`;
-                userNameHeader.textContent = displayName;
-                welcomeUserName.textContent = displayName;
+                if (userAvatar) userAvatar.src = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=0D9488&color=fff`;
+                if (userNameHeader) userNameHeader.textContent = displayName;
+                if (welcomeUserName) welcomeUserName.textContent = displayName;
                 
-                const reserverInput = document.getElementById('reserverName');
-                if (reserverInput && !reserverInput.value) {
-                    reserverInput.value = displayName;
+                if (reserverNameInput && !reserverNameInput.value) {
+                    reserverNameInput.value = displayName;
                 }
 
-                loginSection.classList.add('hidden');
-                appSection.classList.remove('hidden');
-                userInfoHeader.classList.remove('hidden');
+                if (loginSection) loginSection.classList.add('hidden');
+                if (appSection) appSection.classList.remove('hidden');
+                if (userInfoHeader) userInfoHeader.classList.remove('hidden');
 
                 // Start Listening to Database
                 listenToReservations();
             } else {
                 currentUser = null;
-                loginSection.classList.remove('hidden');
-                appSection.classList.add('hidden');
-                userInfoHeader.classList.add('hidden');
+                if (loginSection) loginSection.classList.remove('hidden');
+                if (appSection) appSection.classList.add('hidden');
+                if (userInfoHeader) userInfoHeader.classList.add('hidden');
                 reservations = [];
             }
         });
 
         // Google Login Handler with Error Handling
-        googleLoginBtn.addEventListener('click', async () => {
-            loginErrorAlert.classList.add('hidden');
-            try {
-                await signInWithPopup(auth, googleProvider);
-                showToast('Googleログインに成功しました', 'success');
-            } catch (error) {
-                console.warn("Login Error caught:", error.code, error.message);
-                loginErrorAlert.classList.remove('hidden');
-                
-                if (error.code === 'auth/unauthorized-domain' || error.message?.includes('unauthorized-domain')) {
-                    loginErrorMessage.innerHTML = 'プレビュー環境またはドメイン未登録のためGoogleポップアップが拒否されました。<br><strong>下の「テストユーザーとしてログイン」ボタン</strong>を押してアプリの全機能をテストできます。<br>※Firebaseコンソールの「Authentication → 設定 → 承認済みドメイン」にデプロイ先URL（例: tesuto-8b5c1.web.app）を追加すると本番のGoogleログインも可能になります。';
-                } else {
-                    loginErrorMessage.textContent = error.message || 'ログイン処理中にエラーが発生しました。';
+        if (googleLoginBtn) {
+            googleLoginBtn.addEventListener('click', async () => {
+                if (loginErrorAlert) loginErrorAlert.classList.add('hidden');
+                try {
+                    await signInWithPopup(auth, googleProvider);
+                    showToast('Googleログインに成功しました', 'success');
+                } catch (error) {
+                    console.warn("Login Error caught:", error.code, error.message);
+                    if (loginErrorAlert) loginErrorAlert.classList.remove('hidden');
+                    
+                    if (error.code === 'auth/unauthorized-domain' || error.message?.includes('unauthorized-domain')) {
+                        loginErrorMessage.innerHTML = 'ドメイン未承認またはCross-Originポリシー制限のためGoogleログインが拒否されました。<br><strong>下の「テストユーザーとしてログイン」ボタン</strong>でアプリをテストできます。<br>※Firebaseコンソール（Authentication → 設定 → 承認済みドメイン）にドメインを追加するとGoogleログインも有効化されます。';
+                    } else if (error.code === 'auth/popup-blocked' || error.message?.includes('popup')) {
+                        loginErrorMessage.textContent = 'ポップアップがブラウザにブロックされました。ポップアップの許可を行うか、テストログインをご利用ください。';
+                    } else {
+                        loginErrorMessage.textContent = error.message || 'ログイン処理中にエラーが発生しました。';
+                    }
+                    showToast('Googleログインできませんでした（下のテストログインをご利用ください）', 'error');
                 }
-                showToast('Googleログインできませんでした（下のテストログインをご利用ください）', 'error');
-            }
-        });
+            });
+        }
 
         // Demo / Anonymous Auth Fallback Login Handler
-        demoLoginBtn.addEventListener('click', async () => {
-            loginErrorAlert.classList.add('hidden');
-            try {
-                // Real Firebase Anonymous Auth
-                await signInAnonymously(auth);
-                showToast('テストユーザーとしてログインしました', 'info');
-            } catch (error) {
-                console.error("Anonymous Auth Error:", error);
-                // Fallback Mock User if Firebase Auth completely disabled
-                const mockUser = {
-                    uid: 'demo-user-123',
-                    displayName: 'テスト生徒',
-                    email: 'test@example.com',
-                    photoURL: ''
-                };
-                currentUser = mockUser;
-                userAvatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(mockUser.displayName)}&background=0D9488&color=fff`;
-                userNameHeader.textContent = mockUser.displayName;
-                welcomeUserName.textContent = mockUser.displayName;
-                document.getElementById('reserverName').value = mockUser.displayName;
+        if (demoLoginBtn) {
+            demoLoginBtn.addEventListener('click', async () => {
+                if (loginErrorAlert) loginErrorAlert.classList.add('hidden');
+                try {
+                    await signInAnonymously(auth);
+                    showToast('テストユーザーとしてログインしました', 'info');
+                } catch (error) {
+                    console.error("Anonymous Auth Error:", error);
+                    const mockUser = {
+                        uid: 'demo-user-123',
+                        displayName: 'テスト生徒',
+                        email: 'test@example.com',
+                        photoURL: ''
+                    };
+                    currentUser = mockUser;
+                    if (userAvatar) userAvatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(mockUser.displayName)}&background=0D9488&color=fff`;
+                    if (userNameHeader) userNameHeader.textContent = mockUser.displayName;
+                    if (welcomeUserName) welcomeUserName.textContent = mockUser.displayName;
+                    if (reserverNameInput) reserverNameInput.value = mockUser.displayName;
 
-                loginSection.classList.add('hidden');
-                appSection.classList.remove('hidden');
-                userInfoHeader.classList.remove('hidden');
+                    if (loginSection) loginSection.classList.add('hidden');
+                    if (appSection) appSection.classList.remove('hidden');
+                    if (userInfoHeader) userInfoHeader.classList.remove('hidden');
 
-                listenToReservations();
-                showToast('テストユーザーとしてログインしました', 'info');
-            }
-        });
+                    listenToReservations();
+                    showToast('テストユーザーとしてログインしました', 'info');
+                }
+            });
+        }
 
         // Logout Handler
-        logoutBtn.addEventListener('click', async () => {
-            try {
-                if (auth.currentUser) {
-                    await signOut(auth);
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                try {
+                    if (auth.currentUser) {
+                        await signOut(auth);
+                    }
+                    currentUser = null;
+                    if (loginSection) loginSection.classList.remove('hidden');
+                    if (appSection) appSection.classList.add('hidden');
+                    if (userInfoHeader) userInfoHeader.classList.add('hidden');
+                    showToast('ログアウトしました', 'info');
+                } catch (error) {
+                    console.error("Logout Error:", error);
+                    showToast('ログアウト処理中にエラーが発生しました', 'error');
                 }
-                currentUser = null;
-                loginSection.classList.remove('hidden');
-                appSection.classList.add('hidden');
-                userInfoHeader.classList.add('hidden');
-                showToast('ログアウトしました', 'info');
-            } catch (error) {
-                console.error("Logout Error:", error);
-                showToast('ログアウト処理中にエラーが発生しました', 'error');
-            }
-        });
+            });
+        }
 
         // Collection Reference based on Rule 1 (Mandatory Path Guidelines)
         function getCollectionRef() {
@@ -494,7 +530,7 @@
 
         // Firestore Realtime Updates Listener
         function listenToReservations() {
-            loadingSpinner.classList.remove('hidden');
+            if (loadingSpinner) loadingSpinner.classList.remove('hidden');
             const reservationsRef = getCollectionRef();
 
             onSnapshot(reservationsRef, (snapshot) => {
@@ -514,11 +550,11 @@
                     return a.timeSlot.localeCompare(b.timeSlot);
                 });
 
-                loadingSpinner.classList.add('hidden');
+                if (loadingSpinner) loadingSpinner.classList.add('hidden');
                 renderReservations();
             }, (error) => {
                 console.error("Firestore Listen Error:", error);
-                loadingSpinner.classList.add('hidden');
+                if (loadingSpinner) loadingSpinner.classList.add('hidden');
                 showToast('データ取得に失敗しました', 'error');
             });
         }
@@ -533,95 +569,100 @@
 
         // Hide Form Error
         function clearFormError() {
-            formErrorAlert.classList.add('hidden');
-            formErrorMessage.textContent = '';
+            if (formErrorAlert) formErrorAlert.classList.add('hidden');
+            if (formErrorMessage) formErrorMessage.textContent = '';
         }
 
         // Show Form Error
         function showFormError(msg) {
-            formErrorMessage.textContent = msg;
-            formErrorAlert.classList.remove('hidden');
+            if (formErrorMessage) formErrorMessage.textContent = msg;
+            if (formErrorAlert) formErrorAlert.classList.remove('hidden');
         }
 
         // Form Submit (Create or Edit)
-        reservationForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            clearFormError();
+        if (reservationForm) {
+            reservationForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                clearFormError();
 
-            const facility = facilityNameInput.value.trim();
-            const date = useDateInput.value;
-            const time = timeSlotInput.value;
-            const reserver = reserverNameInput.value.trim();
-            const purpose = purposeInput.value.trim();
-            const editId = editReservationId.value;
+                const facility = facilityNameInput ? facilityNameInput.value.trim() : '';
+                const date = useDateInput ? useDateInput.value : '';
+                const time = timeSlotInput ? timeSlotInput.value : '';
+                const reserver = reserverNameInput ? reserverNameInput.value.trim() : '';
+                const purpose = purposeInput ? purposeInput.value.trim() : '';
+                const editId = editReservationId ? editReservationId.value : '';
 
-            // Form Validation
-            if (!facility || !date || !time || !reserver || !purpose) {
-                showFormError('すべての必須項目を入力してください。');
-                return;
-            }
-
-            // Duplicate Prevention Check
-            if (isDuplicateReservation(facility, date, time, editId)) {
-                showFormError(`【重複警告】指定された施設「${facility}」の ${date} [${time}] はすでに予約されています。`);
-                return;
-            }
-
-            const payload = {
-                facilityName: facility,
-                useDate: date,
-                timeSlot: time,
-                reserverName: reserver,
-                purpose: purpose,
-                userId: currentUser ? currentUser.uid : 'anonymous',
-                userEmail: currentUser ? currentUser.email : '',
-                updatedAt: serverTimestamp()
-            };
-
-            try {
-                if (editId) {
-                    // Update existing
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'reservations', editId);
-                    await updateDoc(docRef, payload);
-                    showToast('予約情報を更新しました', 'success');
-                    resetFormState();
-                } else {
-                    // Add new
-                    payload.createdAt = serverTimestamp();
-                    await addDoc(getCollectionRef(), payload);
-                    showToast('新しい予約を登録しました', 'success');
-                    // Reset form fields except reserver name
-                    facilityNameInput.value = '';
-                    timeSlotInput.value = '';
-                    purposeInput.value = '';
+                // Form Validation
+                if (!facility || !date || !time || !reserver || !purpose) {
+                    showFormError('すべての必須項目を入力してください。');
+                    return;
                 }
-            } catch (err) {
-                console.error("Save Error:", err);
-                showFormError('保存中にエラーが発生しました: ' + err.message);
-            }
-        });
+
+                // Duplicate Prevention Check
+                if (isDuplicateReservation(facility, date, time, editId)) {
+                    showFormError(`【重複警告】指定された施設「${facility}」の ${date} [${time}] はすでに予約されています。`);
+                    return;
+                }
+
+                const payload = {
+                    facilityName: facility,
+                    useDate: date,
+                    timeSlot: time,
+                    reserverName: reserver,
+                    purpose: purpose,
+                    userId: currentUser ? currentUser.uid : 'anonymous',
+                    userEmail: currentUser ? currentUser.email : '',
+                    updatedAt: serverTimestamp()
+                };
+
+                try {
+                    if (editId) {
+                        // Update existing
+                        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'reservations', editId);
+                        await updateDoc(docRef, payload);
+                        showToast('予約情報を更新しました', 'success');
+                        resetFormState();
+                    } else {
+                        // Add new
+                        payload.createdAt = serverTimestamp();
+                        await addDoc(getCollectionRef(), payload);
+                        showToast('新しい予約を登録しました', 'success');
+                        
+                        // Reset form fields except reserver name
+                        if (facilityNameInput) facilityNameInput.value = '';
+                        if (timeSlotInput) timeSlotInput.value = '';
+                        if (purposeInput) purposeInput.value = '';
+                    }
+                } catch (err) {
+                    console.error("Save Error:", err);
+                    showFormError('保存中にエラーが発生しました: ' + err.message);
+                }
+            });
+        }
 
         // Cancel Edit Mode
-        cancelEditBtn.addEventListener('click', resetFormState);
+        if (cancelEditBtn) {
+            cancelEditBtn.addEventListener('click', resetFormState);
+        }
 
         function resetFormState() {
-            editReservationId.value = '';
-            formTitle.textContent = '新規予約の登録';
-            submitBtnText.textContent = '予約を登録する';
-            cancelEditBtn.classList.add('hidden');
-            facilityNameInput.value = '';
-            timeSlotInput.value = '';
-            purposeInput.value = '';
-            if (currentUser) {
-                reserverNameInput.value = currentUser.displayName || '';
+            if (editReservationId) editReservationId.value = '';
+            if (formTitle) formTitle.textContent = '新規予約の登録';
+            if (submitBtnText) submitBtnText.textContent = '予約を登録する';
+            if (cancelEditBtn) cancelEditBtn.classList.add('hidden');
+            if (facilityNameInput) facilityNameInput.value = '';
+            if (timeSlotInput) timeSlotInput.value = '';
+            if (purposeInput) purposeInput.value = '';
+            if (currentUser && reserverNameInput) {
+                reserverNameInput.value = currentUser.displayName || (currentUser.isAnonymous ? 'テスト生徒（匿名）' : 'ユーザー');
             }
             clearFormError();
         }
 
         // Filter and Render Reservations
         function renderReservations() {
-            const selectedFacility = filterFacility.value;
-            const selectedDate = filterDate.value;
+            const selectedFacility = filterFacility ? filterFacility.value : '';
+            const selectedDate = filterDate ? filterDate.value : '';
 
             const filtered = reservations.filter(r => {
                 const matchFacility = !selectedFacility || r.facilityName === selectedFacility;
@@ -629,62 +670,61 @@
                 return matchFacility && matchDate;
             });
 
-            totalReservationCount.textContent = reservations.length;
-            filteredCountBadge.textContent = `${filtered.length}件表示中`;
+            if (totalReservationCount) totalReservationCount.textContent = reservations.length;
+            if (filteredCountBadge) filteredCountBadge.textContent = `${filtered.length}件表示中`;
 
             if (filtered.length === 0) {
-                reservationList.innerHTML = '';
-                emptyState.classList.remove('hidden');
+                if (reservationList) reservationList.innerHTML = '';
+                if (emptyState) emptyState.classList.remove('hidden');
                 return;
             }
 
-            emptyState.classList.add('hidden');
+            if (emptyState) emptyState.classList.add('hidden');
             
-            reservationList.innerHTML = filtered.map(r => {
-                const isOwner = currentUser && (r.userId === currentUser.uid || r.userEmail === currentUser.email);
-                
-                // Color badge logic by facility
-                let badgeColor = "bg-emerald-100 text-emerald-800 border-emerald-200";
-                if (r.facilityName.includes('体育館')) badgeColor = "bg-blue-100 text-blue-800 border-blue-200";
-                if (r.facilityName.includes('実習室A')) badgeColor = "bg-amber-100 text-amber-800 border-amber-200";
-                if (r.facilityName.includes('実習室B')) badgeColor = "bg-purple-100 text-purple-800 border-purple-200";
-                if (r.facilityName.includes('パソコン')) badgeColor = "bg-indigo-100 text-indigo-800 border-indigo-200";
+            if (reservationList) {
+                reservationList.innerHTML = filtered.map(r => {
+                    let badgeColor = "bg-emerald-100 text-emerald-800 border-emerald-200";
+                    if (r.facilityName.includes('体育館')) badgeColor = "bg-blue-100 text-blue-800 border-blue-200";
+                    if (r.facilityName.includes('実習室A')) badgeColor = "bg-amber-100 text-amber-800 border-amber-200";
+                    if (r.facilityName.includes('実習室B')) badgeColor = "bg-purple-100 text-purple-800 border-purple-200";
+                    if (r.facilityName.includes('パソコン')) badgeColor = "bg-indigo-100 text-indigo-800 border-indigo-200";
 
-                return `
-                    <div class="bg-white rounded-xl border border-slate-200/90 p-4 hover:shadow-md transition duration-200 flex flex-col justify-between space-y-3">
-                        <div class="flex items-start justify-between gap-2">
-                            <div class="flex items-center space-x-2">
-                                <span class="text-xs font-semibold px-2.5 py-1 rounded-lg border ${badgeColor}">
-                                    ${escapeHtml(r.facilityName)}
-                                </span>
-                                <span class="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded-lg flex items-center gap-1">
-                                    <i class="fa-regular fa-clock text-slate-400"></i> ${escapeHtml(r.timeSlot)}
-                                </span>
+                    return `
+                        <div class="bg-white rounded-xl border border-slate-200/90 p-4 hover:shadow-md transition duration-200 flex flex-col justify-between space-y-3">
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-xs font-semibold px-2.5 py-1 rounded-lg border ${badgeColor}">
+                                        ${escapeHtml(r.facilityName)}
+                                    </span>
+                                    <span class="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded-lg flex items-center gap-1">
+                                        <i class="fa-regular fa-clock text-slate-400"></i> ${escapeHtml(r.timeSlot)}
+                                    </span>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="flex items-center space-x-1">
+                                    <button onclick="window.editReservation('${r.id}')" title="編集" class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                    <button onclick="window.openDeleteModal('${r.id}')" title="削除" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </div>
                             </div>
 
-                            <!-- Action Buttons -->
-                            <div class="flex items-center space-x-1">
-                                <button onclick="window.editReservation('${r.id}')" title="編集" class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition">
-                                    <i class="fa-solid fa-pen-to-square"></i>
-                                </button>
-                                <button onclick="window.openDeleteModal('${r.id}')" title="削除" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition">
-                                    <i class="fa-solid fa-trash-can"></i>
-                                </button>
+                            <div class="space-y-1">
+                                <div class="flex items-center text-xs text-slate-500 font-medium space-x-3">
+                                    <span><i class="fa-regular fa-calendar text-emerald-600 mr-1"></i>${escapeHtml(r.useDate)}</span>
+                                    <span><i class="fa-regular fa-user text-emerald-600 mr-1"></i>${escapeHtml(r.reserverName)}</span>
+                                </div>
+                                <p class="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-100 mt-2 whitespace-pre-wrap leading-relaxed">
+                                    ${escapeHtml(r.purpose)}
+                                </p>
                             </div>
                         </div>
-
-                        <div class="space-y-1">
-                            <div class="flex items-center text-xs text-slate-500 font-medium space-x-3">
-                                <span><i class="fa-regular fa-calendar text-emerald-600 mr-1"></i>${escapeHtml(r.useDate)}</span>
-                                <span><i class="fa-regular fa-user text-emerald-600 mr-1"></i>${escapeHtml(r.reserverName)}</span>
-                            </div>
-                            <p class="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-100 mt-2 whitespace-pre-wrap leading-relaxed">
-                                ${escapeHtml(r.purpose)}
-                            </p>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
+            }
         }
 
         // Edit Action Callback
@@ -692,61 +732,67 @@
             const target = reservations.find(r => r.id === id);
             if (!target) return;
 
-            editReservationId.value = target.id;
-            facilityNameInput.value = target.facilityName;
-            useDateInput.value = target.useDate;
-            timeSlotInput.value = target.timeSlot;
-            reserverNameInput.value = target.reserverName;
-            purposeInput.value = target.purpose;
+            if (editReservationId) editReservationId.value = target.id;
+            if (facilityNameInput) facilityNameInput.value = target.facilityName;
+            if (useDateInput) useDateInput.value = target.useDate;
+            if (timeSlotInput) timeSlotInput.value = target.timeSlot;
+            if (reserverNameInput) reserverNameInput.value = target.reserverName;
+            if (purposeInput) purposeInput.value = target.purpose;
 
-            formTitle.textContent = '予約情報の編集';
-            submitBtnText.textContent = '変更を保存する';
-            cancelEditBtn.classList.remove('hidden');
+            if (formTitle) formTitle.textContent = '予約情報の編集';
+            if (submitBtnText) submitBtnText.textContent = '変更を保存する';
+            if (cancelEditBtn) cancelEditBtn.classList.remove('hidden');
             clearFormError();
 
-            // Scroll to form on mobile
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
         // Open Delete Modal
         window.openDeleteModal = function(id) {
             pendingDeleteId = id;
-            deleteModal.classList.remove('hidden');
+            if (deleteModal) deleteModal.classList.remove('hidden');
         };
 
-        cancelDeleteBtn.addEventListener('click', () => {
-            pendingDeleteId = null;
-            deleteModal.classList.add('hidden');
-        });
-
-        confirmDeleteBtn.addEventListener('click', async () => {
-            if (!pendingDeleteId) return;
-            try {
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'reservations', pendingDeleteId);
-                await deleteDoc(docRef);
-                showToast('予約を削除しました', 'success');
-            } catch (err) {
-                console.error("Delete Error:", err);
-                showToast('削除に失敗しました: ' + err.message, 'error');
-            } finally {
+        if (cancelDeleteBtn) {
+            cancelDeleteBtn.addEventListener('click', () => {
                 pendingDeleteId = null;
-                deleteModal.classList.add('hidden');
-            }
-        });
+                if (deleteModal) deleteModal.classList.add('hidden');
+            });
+        }
+
+        if (confirmDeleteBtn) {
+            confirmDeleteBtn.addEventListener('click', async () => {
+                if (!pendingDeleteId) return;
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'reservations', pendingDeleteId);
+                    await deleteDoc(docRef);
+                    showToast('予約を削除しました', 'success');
+                } catch (err) {
+                    console.error("Delete Error:", err);
+                    showToast('削除に失敗しました: ' + err.message, 'error');
+                } finally {
+                    pendingDeleteId = null;
+                    if (deleteModal) deleteModal.classList.add('hidden');
+                }
+            });
+        }
 
         // Filtering Listeners
-        filterFacility.addEventListener('change', renderReservations);
-        filterDate.addEventListener('change', renderReservations);
+        if (filterFacility) filterFacility.addEventListener('change', renderReservations);
+        if (filterDate) filterDate.addEventListener('change', renderReservations);
 
-        resetFilterBtn.addEventListener('click', () => {
-            filterFacility.value = '';
-            filterDate.value = '';
-            renderReservations();
-        });
+        if (resetFilterBtn) {
+            resetFilterBtn.addEventListener('click', () => {
+                if (filterFacility) filterFacility.value = '';
+                if (filterDate) filterDate.value = '';
+                renderReservations();
+            });
+        }
 
         // Toast Notification System
         function showToast(message, type = 'info') {
             const container = document.getElementById('toastContainer');
+            if (!container) return;
             const toast = document.createElement('div');
             
             let bgClass = "bg-slate-800 text-white";
